@@ -30,6 +30,14 @@ initSocket(io);
 // Routes
 app.use('/api/users', userRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Backend is running successfully");
+});
+
+app.get("/api", (req, res) => {
+  res.send("API is working");
+});
+
 const PORT = process.env.PORT || 8080;
 
 mongoose.connect(process.env.MONGODB_URI)
