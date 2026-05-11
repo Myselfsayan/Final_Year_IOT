@@ -5,13 +5,17 @@ import Dashboard from './pages/Dashboard';
 import AdminPanel from './pages/AdminPanel';
 import { ThemeProvider } from './context/ThemeContext';
 
+// For regular users only — redirects admins to their panel, non-logged-in to login
 const ProtectedRoute = ({ user, children }) => {
   if (!user) return <Navigate to="/" replace />;
+  if (user.role === 'admin') return <Navigate to="/admin" replace />;
   return children;
 };
 
+// For admins only — redirects non-admins/guests to login
 const AdminRoute = ({ user, children }) => {
-  if (!user || user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!user) return <Navigate to="/" replace />;
+  if (user.role !== 'admin') return <Navigate to="/" replace />;
   return children;
 };
 
