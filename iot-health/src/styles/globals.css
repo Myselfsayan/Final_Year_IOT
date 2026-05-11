@@ -1,0 +1,50 @@
+/* src/styles/globals.css */
+@import "tailwindcss";
+
+@layer base {
+  html { scroll-behavior: smooth; }
+}
+
+@layer components {
+  .card { @apply rounded-xl border bg-white shadow-sm; }
+  .card-dark { @apply rounded-xl border bg-slate-800 border-slate-700 shadow-sm; }
+
+  /* Skeleton shimmer */
+  .skeleton {
+    background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+  .skeleton-dark {
+    background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin { scrollbar-width: thin; }
+
+  /* Animated gradient background for login page */
+  .bg-animated {
+    background: linear-gradient(300deg, #dbeafe, #e0f2fe, #bfdbfe, #ede9fe);
+    background-size: 240% 240%;
+    animation: gradient-slide 12s ease infinite;
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@keyframes gradient-slide {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-animated { animation: none !important; }
+  .skeleton, .skeleton-dark { animation: none !important; }
+}
