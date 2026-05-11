@@ -19,6 +19,7 @@ const InputField = ({ id, name, type, label, icon: Icon, required, onChange }) =
         type={type}
         required={required}
         onChange={onChange}
+        placeholder={label}
         className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-lg shadow-sm text-sm
           focus:ring-2 focus:ring-blue-400 focus:border-blue-400 focus:outline-none
           bg-white text-gray-800 placeholder-gray-400 transition-all duration-200"
