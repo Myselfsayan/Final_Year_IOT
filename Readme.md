@@ -1,4 +1,4 @@
-# 🫀 Smart Healthcare IoT Monitoring System
+# Smart Healthcare IoT Monitoring System
 
 A full-stack, real-time IoT health monitoring platform built as a Final Year Project. It collects vital signs — **Heart Rate, SpO₂, Body Temperature, and Air Quality (AQI)** — from an ESP32 microcontroller and streams them live to a web dashboard using WebSockets.
 
