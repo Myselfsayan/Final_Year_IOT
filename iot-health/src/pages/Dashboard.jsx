@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
+import api from '../lib/axios';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   BarChart, Bar, ResponsiveContainer
@@ -126,8 +126,7 @@ const Dashboard = ({ user, onLogout }) => {
   const pollingIntervalRef            = useRef(null);
   const { isDark }                    = useTheme();
 
-  const token  = localStorage.getItem('token');
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const token = localStorage.getItem('token');
 
   // ── Dark mode helpers ─────────────────────────────────────────────────────
   const bg        = isDark ? 'bg-slate-900'  : 'bg-gray-50';
@@ -142,14 +141,21 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchData = async () => {
     if (!user?.id || !token) { setLoading(false); return; }
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/${user.id}/data`, config);
+      const res = await api.get(`/${user.id}/data`);
       setData(res.data.slice(0, 20));
     } catch (err) {
-      console.error('Error fetching data:', err);
+      if (err.response?.status !== 401) console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Re-fetch when user returns to tab (mobile back navigation)
+  useEffect(() => {
+    const handleVisibility = () => { if (document.visibilityState === 'visible') fetchData(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user]);
 
   // ── Socket.IO real-time updates ───────────────────────────────────────────
   useEffect(() => {
@@ -190,7 +196,7 @@ const Dashboard = ({ user, onLogout }) => {
   const handleStartMonitoring = async () => {
     setMessage('');
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/device/claim`, {}, config);
+      await api.post('/device/claim', {});
       setIsMonitoring(true);
       setTimer(10);
       setMessage('Device claimed! Monitoring for 10 seconds.');
@@ -202,7 +208,7 @@ const Dashboard = ({ user, onLogout }) => {
   const handleStopMonitoring = async () => {
     if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     try {
-      await axios.post(`${import.meta.env.VITE_API_URL}/device/release`, {}, config);
+      await api.post('/device/release', {});
       setMessage('Monitoring stopped. Refreshing final data...');
       setTimeout(fetchData, 1000);
     } catch (err) {

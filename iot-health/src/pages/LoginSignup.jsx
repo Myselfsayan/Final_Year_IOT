@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import api from '../lib/axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiMail, FiLock, FiUser, FiActivity } from 'react-icons/fi';
 import AnimatedPageWrapper from '../components/AnimatedPageWrapper';
@@ -40,12 +40,10 @@ const LoginSignup = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const url = isLogin
-      ? `${import.meta.env.VITE_API_URL}/login`
-      : `${import.meta.env.VITE_API_URL}/signup`;
+    const endpoint = isLogin ? '/login' : '/signup';
 
     try {
-      const { data } = await axios.post(url, formData);
+      const { data } = await api.post(endpoint, formData);
       if (isLogin) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data));

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import axios from 'axios';
+import api from '../lib/axios';
 import Navbar from '../components/Navbar';
 import AnimatedPageWrapper from '../components/AnimatedPageWrapper';
 import SkeletonCard from '../components/SkeletonCard';
@@ -83,8 +83,7 @@ const AdminPanel = ({ user, onLogout }) => {
   const [search, setSearch]             = useState('');
   const { isDark }                      = useTheme();
 
-  const token  = localStorage.getItem('token');
-  const config = { headers: { Authorization: `Bearer ${token}` } };
+  const token = localStorage.getItem('token');
 
   // ── Theme helpers ─────────────────────────────────────────────────────────
   const bg        = isDark ? 'bg-slate-900'  : 'bg-gray-50';
@@ -101,8 +100,8 @@ const AdminPanel = ({ user, onLogout }) => {
       if (!token) { setLoading(false); return; }
       try {
         const [dataRes, usersRes] = await Promise.all([
-          axios.get(`${import.meta.env.VITE_API_URL}/admin/data`, config),
-          axios.get(`${import.meta.env.VITE_API_URL}/admin/users`, config),
+          api.get('/admin/data'),
+          api.get('/admin/users'),
         ]);
 
         // Build latest-record-per-user map from the global data feed
@@ -146,7 +145,7 @@ const AdminPanel = ({ user, onLogout }) => {
     setSelectedUser(u);
     setUserLoading(true);
     try {
-      const res = await axios.get(`${import.meta.env.VITE_API_URL}/admin/users/${u._id}/data`, config);
+      const res = await api.get(`/admin/users/${u._id}/data`);
       setUserHistory(res.data);
     } catch (err) {
       console.error('Error fetching user history:', err);
