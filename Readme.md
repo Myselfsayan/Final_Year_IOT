@@ -309,7 +309,10 @@ This project is built for academic/educational purposes as a Final Year Engineer
 ---
 
 ## 🙋 Author
-
-**Sayan Ghosh**  
+**Supratim Seal** 
+**Shouvik Pramanik** 
+**Sayan Ghosh** 
+**Saron Som**  
+**Saptarshi Basu**  
 B.Tech — Electronics & Communication Engineering  
 Final Year Project · 2026
