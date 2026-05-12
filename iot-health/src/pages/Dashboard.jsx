@@ -239,6 +239,8 @@ const Dashboard = ({ user, onLogout }) => {
   const { touchDetected, fingerOnSensor } = liveStatus;
   // Show last reading where HR > 0 (finger on sensor — SpO2 can still be 0)
   const latestValidVitals = data.find(d => d.heartrate > 0) || {};
+  // SpO2 has its own lookup — independent of HR (a record can have HR>0 but SpO2=0)
+  const latestValidSpo2   = data.find(d => d.spo2 > 0) || {};
   // Show last reading where airQuality is not null (0 = perfectly clean air, still valid)
   const latestValidAQI    = data.find(d => d.airQuality != null) || {};
   // Chart arrays: HR chart requires heartrate > 0; AQI chart requires non-null value
@@ -366,11 +368,11 @@ const Dashboard = ({ user, onLogout }) => {
                   <p className="text-4xl font-bold text-green-600">{tempInFahrenheit} <span className="text-base">°F</span></p>
                 </div>
 
-                {/* SpO2 — always show last valid reading */}
+                {/* SpO2 — independent lookup so HR=136/SpO2=0 doesn't block SpO2 display */}
                 <div className={`card p-6 text-center ${isDark ? 'bg-slate-800 border-slate-700' : ''}`}>
                   <h3 className={`text-sm mb-1 ${textMuted}`}>SpO₂</h3>
                   <p className="text-4xl font-bold text-red-600">
-                    {latestValidVitals.spo2 || 'N/A'} <span className="text-base">%</span>
+                    {latestValidSpo2.spo2 || 'N/A'} <span className="text-base">%</span>
                   </p>
                   {!fingerOnSensor && <p className="text-xs text-yellow-500 mt-1">Last known</p>}
                 </div>
@@ -421,7 +423,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <ChartCard title="Overall Health Score" isDark={isDark}>
                   <OverallHealthRing
                     hrValue={latestValidVitals.heartrate}
-                    spo2Value={latestValidVitals.spo2}
+                    spo2Value={latestValidSpo2.spo2}
                     aqiValue={latestValidAQI.airQuality}
                     isDark={isDark}
                   />
