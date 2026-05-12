@@ -237,14 +237,15 @@ const Dashboard = ({ user, onLogout }) => {
   // Use liveStatus for real-time touch/finger chips (updates every 2s from ESP32)
   // Use latestData from DB only for the metric card "last known" badge
   const { touchDetected, fingerOnSensor } = liveStatus;
-  // Always show last VALID reading for HR and SpO2 (last record where values > 0)
-  const latestValidVitals = data.find(d => d.heartrate > 0 && d.spo2 > 0) || {};
-  // Always show last valid AQI
-  const latestValidAQI    = data.find(d => d.airQuality != null && d.airQuality > 0) || {};
-  // Filtered chart arrays — strip out zero/null records so graphs never crash to 0
-  const hrChartData  = chartData.filter(d => d.heartrate > 0 && d.spo2 > 0);
-  const aqiChartData = chartData.filter(d => d.airQuality != null && d.airQuality > 0);
-  const tempInFahrenheit = latestData.temperature
+  // Show last reading where HR > 0 (finger on sensor — SpO2 can still be 0)
+  const latestValidVitals = data.find(d => d.heartrate > 0) || {};
+  // Show last reading where airQuality is not null (0 = perfectly clean air, still valid)
+  const latestValidAQI    = data.find(d => d.airQuality != null) || {};
+  // Chart arrays: HR chart requires heartrate > 0; AQI chart requires non-null value
+  const hrChartData  = chartData.filter(d => d.heartrate > 0);
+  const aqiChartData = chartData.filter(d => d.airQuality != null);
+  // Use != null so temperature = 0 still renders (0 is falsy in JS)
+  const tempInFahrenheit = latestData.temperature != null
     ? ((latestData.temperature * 9 / 5) + 32).toFixed(1)
     : 'N/A';
   const aqiInfo  = getAQIInfo(latestValidAQI.airQuality);
