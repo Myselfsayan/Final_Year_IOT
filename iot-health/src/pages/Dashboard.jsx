@@ -198,8 +198,8 @@ const Dashboard = ({ user, onLogout }) => {
     try {
       await api.post('/device/claim', {});
       setIsMonitoring(true);
-      setTimer(10);
-      setMessage('Device claimed! Monitoring for 10 seconds.');
+      setTimer(12); // matches 12s backend claim window
+      setMessage('Device claimed! Monitoring for 12 seconds.');
     } catch (err) {
       setMessage(err.response?.data?.message || 'Failed to claim device.');
     }
@@ -222,13 +222,17 @@ const Dashboard = ({ user, onLogout }) => {
   // ── Derived values ────────────────────────────────────────────────────────
   const latestData      = data.length > 0 ? data[0] : {};
   const chartData       = data.slice().reverse();
-  // Show -- only when touchDetected is explicitly false (new record, no finger).
-  // Old records without the field (undefined) still show their values.
-  const touchDetected = latestData.touchDetected !== false;
+  // touchDetected = TTP223 pad touched by user
+  // fingerOnSensor = MAX30102 optical finger present (gates HR & SpO2)
+  const touchDetected   = latestData.touchDetected  !== false;
+  const fingerOnSensor  = latestData.fingerOnSensor !== false;
   // Always show last VALID reading for HR and SpO2 (last record where values > 0)
   const latestValidVitals = data.find(d => d.heartrate > 0 && d.spo2 > 0) || {};
   // Always show last valid AQI (last record where airQuality is not null)
   const latestValidAQI    = data.find(d => d.airQuality != null) || {};
+  // Filtered chart arrays — strip out zero/null records so graphs never crash to 0
+  const hrChartData  = chartData.filter(d => d.heartrate > 0 && d.spo2 > 0);
+  const aqiChartData = chartData.filter(d => d.airQuality != null && d.airQuality > 0);
   const tempInFahrenheit = latestData.temperature
     ? ((latestData.temperature * 9 / 5) + 32).toFixed(1)
     : 'N/A';
@@ -280,15 +284,25 @@ const Dashboard = ({ user, onLogout }) => {
           <div className={`border p-4 rounded-lg shadow-md mb-8 ${cardBg}`}>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
               <h2 className={`text-xl font-semibold ${textPrime}`}>Device Control</h2>
-              {/* Touch sensor status chip */}
+              {/* Two sensor chips: TTP223 touch + MAX30102 finger */}
               {data.length > 0 && (
-                <div className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full font-medium ${
-                  touchDetected
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'bg-yellow-50 text-yellow-700'
-                }`}>
-                  <span>{touchDetected ? '✅' : '⚠️'}</span>
-                  <span>{touchDetected ? 'Finger Detected' : 'No Finger Detected'}</span>
+                <div className="flex flex-wrap gap-2">
+                  <div className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full font-medium ${
+                    touchDetected
+                      ? 'bg-blue-50 text-blue-700'
+                      : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    <span>{touchDetected ? '👆' : '🖐'}</span>
+                    <span>{touchDetected ? 'Touch: Active' : 'Touch: Idle'}</span>
+                  </div>
+                  <div className={`flex items-center gap-1.5 text-sm px-3 py-1 rounded-full font-medium ${
+                    fingerOnSensor
+                      ? 'bg-green-50 text-green-700'
+                      : 'bg-yellow-50 text-yellow-700'
+                  }`}>
+                    <span>{fingerOnSensor ? '✅' : '⚠️'}</span>
+                    <span>{fingerOnSensor ? 'Finger on Sensor' : 'No Finger Detected'}</span>
+                  </div>
                 </div>
               )}
             </div>
@@ -313,9 +327,9 @@ const Dashboard = ({ user, onLogout }) => {
               )}
             </div>
             {message && <p className={`mt-3 text-sm font-semibold ${textMuted}`}>{message}</p>}
-            {!touchDetected && data.length > 0 && (
+            {!fingerOnSensor && data.length > 0 && (
               <p className="mt-2 text-sm text-yellow-600 flex items-center gap-1">
-                ⚠️ Place your finger on the sensor to start measuring Heart Rate &amp; SpO₂.
+                ⚠️ Place your finger on the MAX30102 sensor to measure Heart Rate &amp; SpO₂.
               </p>
             )}
           </div>
@@ -331,7 +345,7 @@ const Dashboard = ({ user, onLogout }) => {
                   <p className="text-4xl font-bold text-blue-600">
                     {latestValidVitals.heartrate || 'N/A'} <span className="text-base">bpm</span>
                   </p>
-                  {!touchDetected && <p className="text-xs text-yellow-500 mt-1">Last known</p>}
+                  {!fingerOnSensor && <p className="text-xs text-yellow-500 mt-1">Last known</p>}
                 </div>
 
                 {/* Temperature */}
@@ -346,7 +360,7 @@ const Dashboard = ({ user, onLogout }) => {
                   <p className="text-4xl font-bold text-red-600">
                     {latestValidVitals.spo2 || 'N/A'} <span className="text-base">%</span>
                   </p>
-                  {!touchDetected && <p className="text-xs text-yellow-500 mt-1">Last known</p>}
+                  {!fingerOnSensor && <p className="text-xs text-yellow-500 mt-1">Last known</p>}
                 </div>
 
                 {/* Air Quality — always show last valid AQI */}
@@ -361,13 +375,19 @@ const Dashboard = ({ user, onLogout }) => {
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <ChartCard title="Heart Rate Trend" isDark={isDark}>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridLine} />
-                      <XAxis dataKey="createdAt" tickFormatter={t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fill: tickColor, fontSize: 11 }} />
-                      <YAxis domain={['dataMin - 5', 'dataMax + 5']} tick={{ fill: tickColor, fontSize: 11 }} />
-                      <Tooltip contentStyle={ttStyle} />
-                      <Line type="monotone" dataKey="heartrate" stroke="#3b82f6" strokeWidth={2} dot={false} name="Heart Rate" />
-                    </LineChart>
+                    {hrChartData.length > 0 ? (
+                      <LineChart data={hrChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridLine} />
+                        <XAxis dataKey="createdAt" tickFormatter={t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fill: tickColor, fontSize: 11 }} />
+                        <YAxis domain={['dataMin - 5', 'dataMax + 5']} tick={{ fill: tickColor, fontSize: 11 }} />
+                        <Tooltip contentStyle={ttStyle} />
+                        <Line type="monotone" dataKey="heartrate" stroke="#3b82f6" strokeWidth={2} dot={{ r: 4, fill: '#3b82f6' }} name="Heart Rate (bpm)" />
+                      </LineChart>
+                    ) : (
+                      <div className={`flex items-center justify-center h-full text-sm ${textMuted}`}>
+                        Place finger on MAX30102 to see Heart Rate trend
+                      </div>
+                    )}
                   </ResponsiveContainer>
                 </ChartCard>
 
@@ -397,13 +417,19 @@ const Dashboard = ({ user, onLogout }) => {
 
                 <ChartCard title="Air Quality Trend (AQI)" isDark={isDark}>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={gridLine} />
-                      <XAxis dataKey="createdAt" tickFormatter={t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fill: tickColor, fontSize: 11 }} />
-                      <YAxis domain={[0, 200]} tick={{ fill: tickColor, fontSize: 11 }} />
-                      <Tooltip contentStyle={ttStyle} />
-                      <Line type="monotone" dataKey="airQuality" stroke="#f97316" strokeWidth={2} dot={false} name="AQI" />
-                    </LineChart>
+                    {aqiChartData.length > 0 ? (
+                      <LineChart data={aqiChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={gridLine} />
+                        <XAxis dataKey="createdAt" tickFormatter={t => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} tick={{ fill: tickColor, fontSize: 11 }} />
+                        <YAxis domain={[0, 500]} tick={{ fill: tickColor, fontSize: 11 }} />
+                        <Tooltip contentStyle={ttStyle} />
+                        <Line type="monotone" dataKey="airQuality" stroke="#f97316" strokeWidth={2} dot={{ r: 4, fill: '#f97316' }} name="AQI" />
+                      </LineChart>
+                    ) : (
+                      <div className={`flex items-center justify-center h-full text-sm ${textMuted}`}>
+                        No AQI data yet — start a monitoring session
+                      </div>
+                    )}
                   </ResponsiveContainer>
                 </ChartCard>
               </div>

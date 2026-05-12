@@ -3,7 +3,7 @@ const User = require('../models/User.js');
 const SensorData = require('../models/SensorData.js');
 const { protect } = require('../middleware/authMiddleware.js');
 const generateToken = require('../utils/generateToken.js');
-const { broadcastSensorData, getEsp32Status } = require('../socket/socketHandler.js');
+const { broadcastSensorData, getEsp32Status, setEsp32Online, setEsp32Offline } = require('../socket/socketHandler.js');
 
 const router = express.Router();
 
@@ -145,7 +145,7 @@ router.post('/device/claim', protect, (req, res) => {
     activeDevice.timeoutId = setTimeout(() => {
       activeDevice.userId = null;
       activeDevice.timeoutId = null;
-    }, 10000);
+    }, 12000); // 12s: gives ESP32 time to send its single 8s reading before session ends
     res.status(200).json({ message: 'Device claimed successfully.' });
   } else {
     res.status(409).json({ message: 'Device is currently in use.' });
@@ -180,8 +180,44 @@ router.get('/device/esp32-status', (req, res) => {
 // @desc    Receive sensor data from ESP32 / simulator
 // @route   POST /api/users/sensor-data
 // @access  Public (device authenticates via deviceId)
+// ── ESP32 Heartbeat Tracker ───────────────────────────────────────────────────
+// The ESP32 uses plain HTTP (no Socket.IO client), so we detect its
+// online/offline state by watching for incoming POST requests.
+// If no POST arrives within ESP32_TIMEOUT_MS, we broadcast offline.
+const ESP32_TIMEOUT_MS = 15000; // 1.8× the 8-second send interval — marks offline only after genuine inactivity
+let esp32HeartbeatTimer = null;
+
+function refreshEsp32Heartbeat() {
+  // Mark online and notify all browsers
+  setEsp32Online();
+  // Reset the inactivity timer
+  if (esp32HeartbeatTimer) clearTimeout(esp32HeartbeatTimer);
+  esp32HeartbeatTimer = setTimeout(() => {
+    setEsp32Offline();
+    console.log('[ESP32] No data received — marking OFFLINE');
+  }, ESP32_TIMEOUT_MS);
+}
+
+// ─── Sensor Data Ingestion ────────────────────────────────────────────────────
+
+// @desc    Receive sensor data from ESP32 / simulator
+// @route   POST /api/users/sensor-data
+// @access  Public (device authenticates via deviceId)
 router.post('/sensor-data', async (req, res) => {
-  const { deviceId, heartrate, temperature, spo2, touchDetected, airQuality } = req.body;
+  const {
+    deviceId,
+    heartrate,
+    temperature,
+    spo2,
+    touchDetected,    // TTP223 capacitive touch pad — user touched the pad
+    fingerOnSensor,   // MAX30102 optical — finger placed on HR/SpO2 sensor
+    airQuality
+  } = req.body;
+
+  // ── Always refresh ESP32 heartbeat on any valid POST ─────────────────────
+  if (deviceId === activeDevice.deviceId) {
+    refreshEsp32Heartbeat();
+  }
 
   if (activeDevice.userId && deviceId === activeDevice.deviceId) {
     try {
@@ -190,7 +226,7 @@ router.post('/sensor-data', async (req, res) => {
       // When limit is reached, trim oldest records back to QUEUE_TRIM_TO.
       const count = await SensorData.countDocuments({ userId: activeDevice.userId });
       if (count >= QUEUE_MAX) {
-        const excess = count - QUEUE_TRIM_TO + 1; // +1 to make room for new record
+        const excess = count - QUEUE_TRIM_TO + 1;
         const oldest = await SensorData.find({ userId: activeDevice.userId })
           .sort({ createdAt: 1 })
           .limit(excess)
@@ -200,14 +236,19 @@ router.post('/sensor-data', async (req, res) => {
       }
       // ─────────────────────────────────────────────────────────────────────
 
-      // Only store HR and SpO2 when finger is actually detected
+      // Gate HR & SpO2 on MAX30102 finger detection (fingerOnSensor).
+      // touchDetected is the TTP223 pad — separate from the optical sensor.
+      // Fall back to touchDetected for older firmware that doesn't send fingerOnSensor.
+      const fingerPresent = (fingerOnSensor !== undefined) ? fingerOnSensor : touchDetected;
+
       const newRecord = await SensorData.create({
-        userId: activeDevice.userId,
-        heartrate: touchDetected ? heartrate : 0,
+        userId:         activeDevice.userId,
+        heartrate:      fingerPresent ? heartrate : 0,
         temperature,
-        spo2: touchDetected ? spo2 : 0,
-        touchDetected: touchDetected || false,
-        airQuality: airQuality !== undefined ? airQuality : null,
+        spo2:           fingerPresent ? spo2 : 0,
+        touchDetected:  touchDetected  || false,
+        fingerOnSensor: fingerPresent  || false,
+        airQuality:     airQuality !== undefined ? airQuality : null,
       });
 
       // Populate userId.name before broadcasting
