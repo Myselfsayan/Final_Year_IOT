@@ -123,22 +123,25 @@ const AdminPanel = ({ user, onLogout }) => {
 
   // ── Socket: update latest vitals in real-time ─────────────────────────────
   useEffect(() => {
-    socket.connect();
+    if (!socket.connected) socket.connect();
 
-    socket.on('sensor:update', (newRecord) => {
+    const onSensorUpdate = (newRecord) => {
       const uid = String(newRecord.userId?._id || newRecord.userId);
       setLatestByUser(prev => ({ ...prev, [uid]: newRecord }));
 
       if (selectedUser && uid === String(selectedUser._id)) {
         setUserHistory(prev => [newRecord, ...prev].slice(0, 50));
       }
-    });
+    };
+
+    socket.on('sensor:update', onSensorUpdate);
 
     return () => {
-      socket.off('sensor:update');
-      socket.disconnect();
+      // Only remove this component's listener — never disconnect the shared socket
+      socket.off('sensor:update', onSensorUpdate);
     };
   }, [selectedUser]);
+
 
   // ── Load selected user's history ──────────────────────────────────────────
   const handleSelectUser = async (u) => {

@@ -159,23 +159,27 @@ const Dashboard = ({ user, onLogout }) => {
 
   // ── Socket.IO real-time updates ───────────────────────────────────────────
   useEffect(() => {
-    socket.connect();
+    // Connect once (no-op if already connected — shared singleton)
+    if (!socket.connected) socket.connect();
 
-    socket.on('sensor:update', (newRecord) => {
+    const onSensorUpdate = (newRecord) => {
       const recordUserId = newRecord.userId?._id || newRecord.userId;
       if (String(recordUserId) === String(user?.id)) {
         setData(prev => [newRecord, ...prev].slice(0, 20));
       }
-    });
+    };
 
-    socket.on('device:status', ({ connected }) => {
+    const onDeviceStatus = ({ connected }) => {
       setEsp32Connected(connected);
-    });
+    };
+
+    socket.on('sensor:update', onSensorUpdate);
+    socket.on('device:status', onDeviceStatus);
 
     return () => {
-      socket.off('sensor:update');
-      socket.off('device:status');
-      socket.disconnect();
+      // Only remove THIS component's listeners — never disconnect the shared socket
+      socket.off('sensor:update', onSensorUpdate);
+      socket.off('device:status', onDeviceStatus);
     };
   }, [user]);
 
