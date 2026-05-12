@@ -52,7 +52,14 @@ const setEsp32Offline = () => {
   }
 };
 
+/**
+ * Broadcasts live sensor status (touch + finger) to all browser clients.
+ * Called every 2s from the /device/live-status route — NOT saved to DB.
+ */
+const broadcastLiveStatus = (status) => {
+  if (_io) _io.emit('live:status', status);
+};
+
 const getEsp32Status = () => esp32Connected;
 
-module.exports = { initSocket, broadcastSensorData, getEsp32Status, setEsp32Online, setEsp32Offline };
-
+module.exports = { initSocket, broadcastSensorData, broadcastLiveStatus, getEsp32Status, setEsp32Online, setEsp32Offline };

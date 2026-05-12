@@ -3,7 +3,7 @@ const User = require('../models/User.js');
 const SensorData = require('../models/SensorData.js');
 const { protect } = require('../middleware/authMiddleware.js');
 const generateToken = require('../utils/generateToken.js');
-const { broadcastSensorData, getEsp32Status, setEsp32Online, setEsp32Offline } = require('../socket/socketHandler.js');
+const { broadcastSensorData, broadcastLiveStatus, getEsp32Status, setEsp32Online, setEsp32Offline } = require('../socket/socketHandler.js');
 
 const router = express.Router();
 
@@ -173,6 +173,26 @@ router.get('/device/status', (req, res) => {
 // ESP32 Physical Connection Status
 router.get('/device/esp32-status', (req, res) => {
   res.status(200).json({ connected: getEsp32Status() });
+});
+
+// ─── ESP32 Always-On Live Status ──────────────────────────────────────────────
+// Called every 2s by the ESP32 regardless of claim state.
+// Refreshes the heartbeat (marks ESP32 online) and broadcasts touch/finger
+// state to all connected dashboard browsers WITHOUT saving to the database.
+router.post('/device/live-status', (req, res) => {
+  const { deviceId, touchDetected, fingerOnSensor } = req.body;
+
+  if (deviceId === activeDevice.deviceId) {
+    // Refresh heartbeat — this keeps the ESP32 badge green
+    refreshEsp32Heartbeat();
+    // Broadcast real-time touch + finger state to all browsers
+    broadcastLiveStatus({
+      touchDetected:  touchDetected  || false,
+      fingerOnSensor: fingerOnSensor || false,
+    });
+  }
+
+  res.status(200).send('OK');
 });
 
 // ─── Sensor Data Ingestion ────────────────────────────────────────────────────

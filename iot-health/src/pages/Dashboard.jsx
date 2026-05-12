@@ -123,6 +123,9 @@ const Dashboard = ({ user, onLogout }) => {
   const [message, setMessage]         = useState('');
   const [timer, setTimer]             = useState(0);
   const [esp32Connected, setEsp32Connected] = useState(false);
+  // liveStatus: real-time touch + finger state pushed every 2s by ESP32
+  // This is separate from `data` (DB records) so it updates even when not monitoring
+  const [liveStatus, setLiveStatus]   = useState({ touchDetected: false, fingerOnSensor: false });
   const pollingIntervalRef            = useRef(null);
   const { isDark }                    = useTheme();
 
@@ -159,7 +162,6 @@ const Dashboard = ({ user, onLogout }) => {
 
   // ── Socket.IO real-time updates ───────────────────────────────────────────
   useEffect(() => {
-    // Connect once (no-op if already connected — shared singleton)
     if (!socket.connected) socket.connect();
 
     const onSensorUpdate = (newRecord) => {
@@ -173,13 +175,19 @@ const Dashboard = ({ user, onLogout }) => {
       setEsp32Connected(connected);
     };
 
+    // live:status fires every 2s from ESP32 regardless of monitoring session
+    const onLiveStatus = (status) => {
+      setLiveStatus(status);
+    };
+
     socket.on('sensor:update', onSensorUpdate);
     socket.on('device:status', onDeviceStatus);
+    socket.on('live:status',   onLiveStatus);
 
     return () => {
-      // Only remove THIS component's listeners — never disconnect the shared socket
       socket.off('sensor:update', onSensorUpdate);
       socket.off('device:status', onDeviceStatus);
+      socket.off('live:status',   onLiveStatus);
     };
   }, [user]);
 
@@ -226,14 +234,13 @@ const Dashboard = ({ user, onLogout }) => {
   // ── Derived values ────────────────────────────────────────────────────────
   const latestData      = data.length > 0 ? data[0] : {};
   const chartData       = data.slice().reverse();
-  // touchDetected = TTP223 pad touched by user
-  // fingerOnSensor = MAX30102 optical finger present (gates HR & SpO2)
-  const touchDetected   = latestData.touchDetected  !== false;
-  const fingerOnSensor  = latestData.fingerOnSensor !== false;
+  // Use liveStatus for real-time touch/finger chips (updates every 2s from ESP32)
+  // Use latestData from DB only for the metric card "last known" badge
+  const { touchDetected, fingerOnSensor } = liveStatus;
   // Always show last VALID reading for HR and SpO2 (last record where values > 0)
   const latestValidVitals = data.find(d => d.heartrate > 0 && d.spo2 > 0) || {};
-  // Always show last valid AQI (last record where airQuality is not null)
-  const latestValidAQI    = data.find(d => d.airQuality != null) || {};
+  // Always show last valid AQI
+  const latestValidAQI    = data.find(d => d.airQuality != null && d.airQuality > 0) || {};
   // Filtered chart arrays — strip out zero/null records so graphs never crash to 0
   const hrChartData  = chartData.filter(d => d.heartrate > 0 && d.spo2 > 0);
   const aqiChartData = chartData.filter(d => d.airQuality != null && d.airQuality > 0);
