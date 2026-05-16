@@ -1,9 +1,16 @@
-const express = require('express');
-const User = require('../models/User.js');
-const SensorData = require('../models/SensorData.js');
-const { protect } = require('../middleware/authMiddleware.js');
-const generateToken = require('../utils/generateToken.js');
-const { broadcastSensorData, broadcastLiveStatus, getEsp32Status, setEsp32Online, setEsp32Offline } = require('../socket/socketHandler.js');
+import express from "express";
+import User from "../models/User.js";
+import SensorData from "../models/SensorData.js";
+import { protect } from "../middleware/authMiddleware.js";
+import generateToken from "../utils/generateToken.js";
+
+import {
+  broadcastSensorData,
+  broadcastLiveStatus,
+  getEsp32Status,
+  setEsp32Online,
+  setEsp32Offline,
+} from "../socket/socketHandler.js";
 
 const router = express.Router();
 
@@ -285,4 +292,4 @@ router.post('/sensor-data', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

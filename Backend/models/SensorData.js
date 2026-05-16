@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from "mongoose";
 
 const sensorDataSchema = new mongoose.Schema({
   userId:         { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
@@ -11,5 +11,5 @@ const sensorDataSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 const SensorData = mongoose.model('SensorData', sensorDataSchema);
-module.exports = SensorData;
+export default SensorData;
 

@@ -1,4 +1,5 @@
-const SensorData = require('../models/SensorData');
+import SensorData from "../models/SensorData.js";
+``
 
 exports.postData = async (req, res) => {
   try {

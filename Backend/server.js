@@ -1,12 +1,14 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const mongoose = require('mongoose');
-const cors = require('cors');
-require('dotenv').config();
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import mongoose from "mongoose";
+import cors from "cors";
+import dotenv from "dotenv";
 
-const userRoutes = require('./routes/userRoutes');
-const { initSocket } = require('./socket/socketHandler');
+import userRoutes from "./routes/userRoutes.js";
+import { initSocket } from "./socket/socketHandler.js";
+
+dotenv.config();
 
 const app = express();
 

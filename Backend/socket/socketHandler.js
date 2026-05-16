@@ -62,4 +62,11 @@ const broadcastLiveStatus = (status) => {
 
 const getEsp32Status = () => esp32Connected;
 
-module.exports = { initSocket, broadcastSensorData, broadcastLiveStatus, getEsp32Status, setEsp32Online, setEsp32Offline };
+export {
+  initSocket,
+  broadcastSensorData,
+  broadcastLiveStatus,
+  getEsp32Status,
+  setEsp32Online,
+  setEsp32Offline,
+};
