@@ -1,7 +1,7 @@
-const axios = require('axios');
+import axios from 'axios';
 
 // --- Configuration ---
-const SERVER_URL = 'http://localhost:8080/api/users';
+const SERVER_URL = process.env.BACKEND_URL ;
 const DEVICE_ID = 'YOUR_ESP32_MAC_ADDRESS'; // IMPORTANT: Must match deviceId in userRoutes.js
 const SEND_INTERVAL = 2000; // Send data every 2 seconds
 
