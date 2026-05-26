@@ -1,7 +1,16 @@
 import axios from 'axios';
 
+// Robustly build the base URL:
+// - Accept VITE_API_URL as just the domain OR the full /api/users path
+// - Always normalise to https://your-backend.com/api/users/
+// - Trailing slash is required so Axios appends relative paths correctly
+//   e.g.  baseURL="…/api/users/"  +  "login"  →  "…/api/users/login"  ✅
+const _raw = import.meta.env.VITE_API_URL || 'http://localhost:8080';
+const _domain = _raw.replace(/\/api\/users\/?$/, '').replace(/\/$/, '');
+const BASE_URL = `${_domain}/api/users/`;
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: BASE_URL,
 });
 
 // Attach the JWT token to every request automatically
