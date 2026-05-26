@@ -211,7 +211,7 @@ router.post('/device/live-status', (req, res) => {
 // The ESP32 uses plain HTTP (no Socket.IO client), so we detect its
 // online/offline state by watching for incoming POST requests.
 // If no POST arrives within ESP32_TIMEOUT_MS, we broadcast offline.
-const ESP32_TIMEOUT_MS = 4000; // 1.8× the 8-second send interval — marks offline only after genuine inactivity
+const ESP32_TIMEOUT_MS = 15000; // 1.8× the 8-second send interval — marks offline only after genuine inactivity
 let esp32HeartbeatTimer = null;
 
 function refreshEsp32Heartbeat() {
