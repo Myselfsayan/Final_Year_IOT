@@ -144,7 +144,7 @@ const Dashboard = ({ user, onLogout }) => {
   const fetchData = async () => {
     if (!user?.id || !token) { setLoading(false); return; }
     try {
-      const res = await api.get(`/${user.id}/data`);
+      const res = await api.get(`${user.id}/data`);
       setData(res.data.slice(0, 20));
     } catch (err) {
       if (err.response?.status !== 401) console.error('Error fetching data:', err);
@@ -208,7 +208,7 @@ const Dashboard = ({ user, onLogout }) => {
   const handleStartMonitoring = async () => {
     setMessage('');
     try {
-      await api.post('/device/claim', {});
+      await api.post('device/claim', {});
       setIsMonitoring(true);
       setTimer(12); // matches 12s backend claim window
       setMessage('Device claimed! Monitoring for 12 seconds.');
@@ -220,7 +220,7 @@ const Dashboard = ({ user, onLogout }) => {
   const handleStopMonitoring = async () => {
     if (pollingIntervalRef.current) clearInterval(pollingIntervalRef.current);
     try {
-      await api.post('/device/release', {});
+      await api.post('device/release', {});
       setMessage('Monitoring stopped. Refreshing final data...');
       setTimeout(fetchData, 1000);
     } catch (err) {

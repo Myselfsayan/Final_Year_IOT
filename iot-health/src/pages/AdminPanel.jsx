@@ -100,8 +100,8 @@ const AdminPanel = ({ user, onLogout }) => {
       if (!token) { setLoading(false); return; }
       try {
         const [dataRes, usersRes] = await Promise.all([
-          api.get('/admin/data'),
-          api.get('/admin/users'),
+          api.get('admin/data'),
+          api.get('admin/users'),
         ]);
 
         // Build latest-record-per-user map from the global data feed
@@ -148,7 +148,7 @@ const AdminPanel = ({ user, onLogout }) => {
     setSelectedUser(u);
     setUserLoading(true);
     try {
-      const res = await api.get(`/admin/users/${u._id}/data`);
+      const res = await api.get(`admin/users/${u._id}/data`);
       setUserHistory(res.data);
     } catch (err) {
       console.error('Error fetching user history:', err);

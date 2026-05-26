@@ -41,7 +41,7 @@ const LoginSignup = ({ onLogin }) => {
     setError('');
     setLoading(true);
 
-    const endpoint = isLogin ? '/login' : '/signup';
+    const endpoint = isLogin ? 'login' : 'signup';
 
     try {
       const { data } = await api.post(endpoint, formData);
